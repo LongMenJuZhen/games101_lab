@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/lmz/文档/games101/build",
+  "command": "/usr/bin/g++ -I/home/lmz/文档/games101/pa0/pa0/EIGEN3_INCLUDE_DIR -g -o CMakeFiles/Transformation.dir/main.cpp.o -c /home/lmz/文档/games101/pa0/pa0/main.cpp",
+  "file": "/home/lmz/文档/games101/pa0/pa0/main.cpp",
+  "output": "CMakeFiles/Transformation.dir/main.cpp.o"
+}
+]
