@@ -1,6 +1,7 @@
 // clang-format off
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <eigen3/Eigen/Dense>
 #include "rasterizer.hpp"
 #include "global.hpp"
 #include "Triangle.hpp"

@@ -1,3 +1,6 @@
 {
-    "cmake.sourceDirectory": "/home/lmz/文档/games101/pa0/pa0"
+    "cmake.sourceDirectory": "/home/lmz/项目/games101_lab/Assignment2/代码框架",
+    "files.associations": {
+        "dense": "cpp"
+    }
 }
