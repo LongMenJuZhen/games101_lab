@@ -43,7 +43,31 @@ auto to_vec4(const Eigen::Vector3f& v3, float w = 1.0f)
 static bool insideTriangle(int x, int y, const Vector3f* _v)
 {   
     // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
-    return true;
+    //顺时针构建边向量
+    Eigen::Vector2f sideAtoB = {_v[1].x() - _v[0].x(), _v[1].y() - _v[0].y()};
+    Eigen::Vector2f sideBtoC = {_v[2].x() - _v[1].x(), _v[2].y() - _v[1].y()};
+    Eigen::Vector2f sideCtoA = {_v[0].x() - _v[2].x(), _v[0].y() - _v[2].y()};
+    //构建点和顶点的向量
+    Eigen::Vector2f AtoPoint = {x - _v[0].x(), y - _v[0].y()};
+    Eigen::Vector2f BtoPoint = {x - _v[1].x(), y - _v[1].y()};
+    Eigen::Vector2f CtoPoint = {x - _v[2].x(), y - _v[2].y()};
+    //计算三个顶点对应的二者叉乘
+    float crossA = sideAtoB.x() * AtoPoint.y() - sideAtoB.y() * AtoPoint.x();
+    float crossB = sideBtoC.x() * BtoPoint.y() - sideBtoC.y() * BtoPoint.x();
+    float crossC = sideCtoA.x() * CtoPoint.y() - sideCtoA.y() * CtoPoint.x();
+    //判断三个向量的叉乘结果的符号相同，据此判断点是否在三角形内
+    if (crossA > 0 && crossB > 0 && crossC > 0)
+    {
+        return true;
+    }
+    else if (crossA < 0 && crossB < 0 && crossC < 0)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
 }
 
 static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f* v)
