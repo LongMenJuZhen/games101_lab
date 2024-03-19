@@ -1,3 +1,0 @@
-/home/lmz/项目/games101_lab/build/CMakeFiles/Rasterizer.dir
-/home/lmz/项目/games101_lab/build/CMakeFiles/edit_cache.dir
-/home/lmz/项目/games101_lab/build/CMakeFiles/rebuild_cache.dir
