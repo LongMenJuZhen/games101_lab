@@ -69,7 +69,35 @@ static bool insideTriangle(int x, int y, const Vector3f* _v)
         return false;
     }
 }
-
+static bool insideTriangle_f(float x, float y, const Vector3f* _v)
+{   
+    // TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
+    //顺时针构建边向量
+    Eigen::Vector2f sideAtoB = {_v[1].x() - _v[0].x(), _v[1].y() - _v[0].y()};
+    Eigen::Vector2f sideBtoC = {_v[2].x() - _v[1].x(), _v[2].y() - _v[1].y()};
+    Eigen::Vector2f sideCtoA = {_v[0].x() - _v[2].x(), _v[0].y() - _v[2].y()};
+    //构建点和顶点的向量
+    Eigen::Vector2f AtoPoint = {x - _v[0].x(), y - _v[0].y()};
+    Eigen::Vector2f BtoPoint = {x - _v[1].x(), y - _v[1].y()};
+    Eigen::Vector2f CtoPoint = {x - _v[2].x(), y - _v[2].y()};
+    //计算三个顶点对应的二者叉乘
+    float crossA = sideAtoB.x() * AtoPoint.y() - sideAtoB.y() * AtoPoint.x();
+    float crossB = sideBtoC.x() * BtoPoint.y() - sideBtoC.y() * BtoPoint.x();
+    float crossC = sideCtoA.x() * CtoPoint.y() - sideCtoA.y() * CtoPoint.x();
+    //判断三个向量的叉乘结果的符号相同，据此判断点是否在三角形内
+    if (crossA > 0 && crossB > 0 && crossC > 0)
+    {
+        return true;
+    }
+    else if (crossA < 0 && crossB < 0 && crossC < 0)
+    {
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
 static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector3f* v)
 {
     float c1 = (x*(v[1].y() - v[2].y()) + (v[2].x() - v[1].x())*y + v[1].x()*v[2].y() - v[2].x()*v[1].y()) / (v[0].x()*(v[1].y() - v[2].y()) + (v[2].x() - v[1].x())*v[0].y() + v[1].x()*v[2].y() - v[2].x()*v[1].y());
@@ -130,18 +158,71 @@ void rst::rasterizer::draw(pos_buf_id pos_buffer, ind_buf_id ind_buffer, col_buf
 //Screen space rasterization
 void rst::rasterizer::rasterize_triangle(const Triangle& t) {
     auto v = t.toVector4();
-    
     // TODO : Find out the bounding box of current triangle.
+    //确定包围盒
+    int x_min = std::min(std::min(v[0].x(), v[1].x()), v[2].x());
+    int x_max = std::max(std::max(v[0].x(), v[1].x()), v[2].x());
+    int y_min = std::min(std::min(v[0].y(), v[1].y()), v[2].y());
+    int y_max = std::max(std::max(v[0].y(), v[1].y()), v[2].y());
     // iterate through the pixel and find if the current pixel is inside the triangle
+    // 遍历包围盒里的每个像素(非提高做法)
+    for (int x = x_min; x <= x_max; x++){
+        for (int y = y_min; y <= y_max; y++){
+            //判断是否在三角形里
+            if (insideTriangle(x, y, t.v)){
+                //看看是不是在最前面的
+                // If so, use the following code to get the interpolated z value.
+                auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
+                float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+                float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+                z_interpolated *= w_reciprocal;
+                int index = get_index(x, y);
+                //没有c++基础，这个藏在头文件的depth_buf给我整不会了
+                if (z_interpolated < depth_buf[index]){
+                    //刷新深度
+                    depth_buf[index] = z_interpolated;
+                    // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
+                    //设置像素颜色
+                    set_pixel(Eigen::Vector3f(x, y, 1), t.getColor());
+                }
+            }
+        }
+    }
+    // //遍历包围盒里的每个像素(提高做法)
+    // for (int x = x_min; x <= x_max; x++){
+    //     for (int y = y_min; y <= y_max; y++){
+    //         //超采样2*2
+    //         int count = 0;
 
-    // If so, use the following code to get the interpolated z value.
-    //auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
-    //float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-    //float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-    //z_interpolated *= w_reciprocal;
-
-    // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
-}
+    //             float x1 = x-0.25;
+    //             float y1 = y-0.25;
+    //             //判断是否在三角形里
+    //             if (insideTriangle_f(x1, y1, t.v)){
+    //                 //看看是不是在最前面的
+    //                 // If so, use the following code to get the interpolated z value.
+    //                 auto[alpha, beta, gamma] = computeBarycentric2D(x1, y1, t.v);
+    //                 float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+    //                 float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+    //                 z_interpolated *= w_reciprocal;
+    //                 int index = get_index(x, y);
+    //                 //没有c++基础，这个藏在头文件的depth_buf给我整不会了
+    //                 if (z_interpolated < depth_buf[index]){
+    //                     //刷新深度
+    //                     depth_buf[index] = z_interpolated;
+    //                     // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
+    //                     //设置像素颜色
+    //                     count++;
+                    
+    //                 }
+    //             }
+    //         }
+    //     }
+    }
+        
+        
+            
+            
+    
 
 void rst::rasterizer::set_model(const Eigen::Matrix4f& m)
 {
