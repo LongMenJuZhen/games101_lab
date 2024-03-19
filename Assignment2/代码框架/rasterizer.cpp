@@ -165,59 +165,82 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t) {
     int y_min = std::min(std::min(v[0].y(), v[1].y()), v[2].y());
     int y_max = std::max(std::max(v[0].y(), v[1].y()), v[2].y());
     // iterate through the pixel and find if the current pixel is inside the triangle
-    // 遍历包围盒里的每个像素(非提高做法)
+    // // 遍历包围盒里的每个像素(非提高做法)
+    // for (int x = x_min; x <= x_max; x++){
+    //     for (int y = y_min; y <= y_max; y++){
+    //         //判断是否在三角形里
+    //         if (insideTriangle(x, y, t.v)){
+    //             //看看是不是在最前面的
+    //             // If so, use the following code to get the interpolated z value.
+    //             auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
+    //             float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+    //             float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+    //             z_interpolated *= w_reciprocal;
+    //             int index = get_index(x, y);
+    //             //没有c++基础，这个藏在头文件的depth_buf给我整不会了
+    //             if (z_interpolated < depth_buf[index]){
+    //                 //刷新深度
+    //                 depth_buf[index] = z_interpolated;
+    //                 // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
+    //                 //设置像素颜色
+    //                 set_pixel(Eigen::Vector3f(x, y, 1), t.getColor());
+    //             }
+    //         }
+    //     }
+    // }
+    // //遍历包围盒里的每个像素(提高做法)
     for (int x = x_min; x <= x_max; x++){
         for (int y = y_min; y <= y_max; y++){
-            //判断是否在三角形里
-            if (insideTriangle(x, y, t.v)){
-                //看看是不是在最前面的
-                // If so, use the following code to get the interpolated z value.
+            //四个采样点
+            float x1 = x + 0.25;
+            float y1 = y + 0.25;
+            float x2 = x - 0.25;
+            float y2 = y - 0.25;
+            float x3 = x + 0.25;
+            float y3 = y - 0.25;
+            float x4 = x - 0.25;
+            float y4 = y + 0.25;
+            std::vector<float> x_list = {x1, x2, x3, x4};
+            std::vector<float> y_list = {y1, y2, y3, y4};
+
+            int count = 0;
+            for (int i = 0; i < 4; i++){
+                if (insideTriangle_f(x_list[i], y_list[i], t.v)){
+                    count += 1;
+                }
+            }
+
+            int index = get_index(x, y);
+            
+
+            if (count>0){
+                count_buf[index] = true;
                 auto[alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
                 float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
                 float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
                 z_interpolated *= w_reciprocal;
-                int index = get_index(x, y);
-                //没有c++基础，这个藏在头文件的depth_buf给我整不会了
                 if (z_interpolated < depth_buf[index]){
-                    //刷新深度
+
                     depth_buf[index] = z_interpolated;
-                    // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
-                    //设置像素颜色
-                    set_pixel(Eigen::Vector3f(x, y, 1), t.getColor());
+                    
+                    int count_down = get_index(x, y-1);
+                    int count_up = get_index(x, y+1);
+                    int count_left = get_index(x-1, y);
+                    int count_right = get_index(x+1, y);
+                    
+                    if (count_buf[count_down] && count_buf[count_up] && count_buf[count_left] && count_buf[count_right]){
+                        set_pixel(Eigen::Vector3f(x, y, 1), t.getColor());
+                    }
+                    else{
+                        
+                        set_pixel(Eigen::Vector3f(x, y, 1), t.getColor()*count/4);
+                    }
                 }
             }
+            
         }
     }
-    // //遍历包围盒里的每个像素(提高做法)
-    // for (int x = x_min; x <= x_max; x++){
-    //     for (int y = y_min; y <= y_max; y++){
-    //         //超采样2*2
-    //         int count = 0;
-
-    //             float x1 = x-0.25;
-    //             float y1 = y-0.25;
-    //             //判断是否在三角形里
-    //             if (insideTriangle_f(x1, y1, t.v)){
-    //                 //看看是不是在最前面的
-    //                 // If so, use the following code to get the interpolated z value.
-    //                 auto[alpha, beta, gamma] = computeBarycentric2D(x1, y1, t.v);
-    //                 float w_reciprocal = 1.0/(alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
-    //                 float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
-    //                 z_interpolated *= w_reciprocal;
-    //                 int index = get_index(x, y);
-    //                 //没有c++基础，这个藏在头文件的depth_buf给我整不会了
-    //                 if (z_interpolated < depth_buf[index]){
-    //                     //刷新深度
-    //                     depth_buf[index] = z_interpolated;
-    //                     // TODO : set the current pixel (use the set_pixel function) to the color of the triangle (use getColor function) if it should be painted.
-    //                     //设置像素颜色
-    //                     count++;
-                    
-    //                 }
-    //             }
-    //         }
-    //     }
-    }
+}
         
         
             
@@ -255,6 +278,8 @@ rst::rasterizer::rasterizer(int w, int h) : width(w), height(h)
 {
     frame_buf.resize(w * h);
     depth_buf.resize(w * h);
+    //加一个count_buf
+    count_buf.resize(w * h);
 }
 
 int rst::rasterizer::get_index(int x, int y)
