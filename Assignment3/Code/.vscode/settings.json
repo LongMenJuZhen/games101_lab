@@ -1,7 +1,0 @@
-{
-    "files.associations": {
-        "core": "cpp",
-        "tuple": "cpp",
-        "__node_handle": "cpp"
-    }
-}
