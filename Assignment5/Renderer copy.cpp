@@ -230,9 +230,54 @@ void Renderer::Render(const Scene& scene)
             // vector that passes through it.
             // Also, don't forget to multiply both of them with the variable *scale*, and
             // x (horizontal) variable with the *imageAspectRatio*            
-            x = (2 * (i + 0.5f) / (float)scene.width - 1) * imageAspectRatio * scale;
-            y = (1 - 2 * (j + 0.5f) / (float)scene.height) * scale;
+            x = (2 * (i + 0.5) / (float)scene.width - 1) * imageAspectRatio * scale;
+            y = (1 - 2 * (j + 0.5) / (float)scene.height) * scale;
             Vector3f dir = Vector3f(x, y, -1); // Don't forget to normalize this direction!
+            framebuffer[m++] = castRay(eye_pos, dir, scene, 0);
+        }
+        UpdateProgress(j / (float)scene.height);
+    }
+
+    // save framebuffer to file
+    FILE* fp = fopen("binary.ppm", "wb");
+    (void)fprintf(fp, "P6\n%d %d\n255\n", scene.width, scene.height);
+    for (auto i = 0; i < scene.height * scene.width; ++i) {
+        static unsigned char color[3];
+        color[0] = (char)(255 * clamp(0, 1, framebuffer[i].x));
+        color[1] = (char)(255 * clamp(0, 1, framebuffer[i].y));
+        color[2] = (char)(255 * clamp(0, 1, framebuffer[i].z));
+        fwrite(color, 1, 3, fp);
+    }
+    fclose(fp);    
+}
+void Renderer::Render(const Scene& scene)
+{
+    std::vector<Vector3f> framebuffer(scene.width * scene.height);
+
+    float scale = std::tan(deg2rad(scene.fov * 0.5f));
+    float imageAspectRatio = scene.width / (float)scene.height;
+
+    // Use this variable as the eye position to start your rays.
+    Vector3f eye_pos(0);//摄像机位置(0, 0, 0)
+
+    int m = 0;
+    for (int j = 0; j < scene.height; ++j)
+    {
+        for (int i = 0; i < scene.width; ++i)
+        {
+            //屏幕像素（二维）->裁剪空间（摄像机看向+z，使用左手坐标系）->观察空间（摄像机看向-z，使用右手坐标系）
+            // 观测空间下：generate primary ray direction
+            //此处的i, j是屏幕像素（二维）坐标
+
+            float x = (2 * (i + 0.5f) / (float)(scene.width-1) - 1) * imageAspectRatio * scale;
+            float y = (1 - 2 * (j + 0.5f) / (float)(scene.height-1)) * scale;
+            
+            // TODO: Find the x and y positions of the current pixel to get the direction
+            // vector that passes through it.
+            // Also, don't forget to multiply both of them with the variable *scale*, and
+            // x (horizontal) variable with the *imageAspectRatio*            
+
+            Vector3f dir = normalize(Vector3f(x, y, -1)); // Don't forget to normalize this direction!
             framebuffer[m++] = castRay(eye_pos, dir, scene, 0);
         }
         UpdateProgress(j / (float)scene.height);
